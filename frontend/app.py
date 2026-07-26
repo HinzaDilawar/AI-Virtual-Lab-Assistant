@@ -79,7 +79,7 @@ def run_app():
             radio_default = st.session_state["page"] if st.session_state["page"] in login_pages else "Login"
             default_index = login_pages.index(radio_default)
  
-            choice = st.radio("", login_pages, index=default_index, key="auth_nav_radio")
+            choice = st.radio("Select Option", login_pages, index=default_index, key="auth_nav_radio", label_visibility="collapsed")
  
             # Sidebar se manually switch kare to bhi "page" state sync rahe
             if choice != st.session_state["page"]:
@@ -118,5 +118,7 @@ def run_app():
         else:
             st.session_state["page"] = "Login"
             st.rerun()
+
+
 
 
