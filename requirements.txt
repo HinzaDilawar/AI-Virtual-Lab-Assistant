@@ -1,3 +1,7 @@
 streamlit
 groq
 pandas
+numpy
+plotly
+requests
+python-dotenv
