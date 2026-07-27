@@ -67,7 +67,13 @@ def run_app():
             radio_default = st.session_state["page"] if st.session_state["page"] in login_pages else "Login"
             default_index = login_pages.index(radio_default)
 
-            choice = st.radio("", login_pages, index=default_index, key="auth_nav_radio")
+            choice = st.radio(
+    "Authentication Navigation",
+    login_pages,
+    index=default_index,
+    key="auth_nav_radio",
+    label_visibility="collapsed"
+)
 
             # 🔑 Sirf tab sync karo jab hum already Login/Signup pe hon —
             # warna ye ForgotPassword state ko hamesha wapas "Login" pe overwrite kar deta tha.
