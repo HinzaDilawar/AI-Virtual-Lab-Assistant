@@ -1,5 +1,5 @@
 import streamlit as st
- 
+
 from frontend.pages import login as login_page
 from frontend.pages import signup as signup_page
 from frontend.pages import forgot_password as forgot_password_page
@@ -8,8 +8,8 @@ from frontend.pages import learn as learn_page
 from frontend.pages import code_editor as code_page
 from frontend.pages import teacher_dashboard as teacher_page
 from frontend.pages import ai_chat as ai_chat_page
- 
- 
+
+
 def _apply_css():
     st.markdown("""
         <style>
@@ -24,69 +24,57 @@ def _apply_css():
         .stButton>button { border-radius:10px; }
         </style>
     """, unsafe_allow_html=True)
- 
- 
+
+
 def run_app():
     _apply_css()
- 
-    # Session States Initialize karein
+
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
         st.session_state["username"] = None
- 
-    # Ye line zaroori hai navigation state ko yaad rakhne ke liye
+
     if "nav_to" not in st.session_state:
         st.session_state["nav_to"] = "Dashboard"
- 
+
     if "signup_done" not in st.session_state:
         st.session_state["signup_done"] = False
- 
-    # 🔑 "page" state — Login / Signup / ForgotPassword ke beech ka source of truth.
-    # login.py, signup.py, forgot_password.py sab isi key ko set karke navigate karte hain.
+
     if "page" not in st.session_state:
         st.session_state["page"] = "Signup" if st.session_state.get("signup_done") else "Login"
- 
+
     st.markdown(
         '<div class="topbar"><span class="brand">🧠 AI Virtual Computer Lab Assistant</span>'
         ' — Learn • Code • Debug • AI Chat</div>',
         unsafe_allow_html=True
     )
- 
-    # --- Sidebar Navigation ---
+
     with st.sidebar:
         st.markdown("## Navigation")
         if st.session_state["logged_in"]:
             pages = ["Dashboard", "Learn", "Code", "AI Chat", "Teacher Dashboard", "Logout"]
- 
-            # Check karein ke nav_to list mein hai ya nahi
+
             if st.session_state["nav_to"] not in pages:
                 st.session_state["nav_to"] = "Dashboard"
- 
+
             current_idx = pages.index(st.session_state["nav_to"])
- 
-            # Radio button jo state se connect hai
             choice = st.radio("", pages, index=current_idx, key="main_nav_radio")
- 
-            # Agar user radio se change kare, toh nav_to update karein
+
             if choice != st.session_state["nav_to"]:
                 st.session_state["nav_to"] = choice
                 st.rerun()
         else:
             login_pages = ["Login", "Signup"]
- 
-            # ForgotPassword sidebar radio mein nahi dikhta (ye internal link se hi khulta hai),
-            # lekin agar wahan hain to radio ko "Login" pe highlight rakho.
             radio_default = st.session_state["page"] if st.session_state["page"] in login_pages else "Login"
             default_index = login_pages.index(radio_default)
- 
-            choice = st.radio("Select Option", login_pages, index=default_index, key="auth_nav_radio", label_visibility="collapsed")
- 
-            # Sidebar se manually switch kare to bhi "page" state sync rahe
-            if choice != st.session_state["page"]:
+
+            choice = st.radio("", login_pages, index=default_index, key="auth_nav_radio")
+
+            # 🔑 Sirf tab sync karo jab hum already Login/Signup pe hon —
+            # warna ye ForgotPassword state ko hamesha wapas "Login" pe overwrite kar deta tha.
+            if st.session_state["page"] in login_pages and choice != st.session_state["page"]:
                 st.session_state["page"] = choice
                 st.rerun()
- 
-    # --- Routing Logic ---
+
     if st.session_state["logged_in"]:
         if st.session_state["nav_to"] == "Logout":
             st.session_state["logged_in"] = False
@@ -109,7 +97,7 @@ def run_app():
             ok = login_page.app()
             if ok:
                 st.session_state["logged_in"] = True
-                st.session_state["nav_to"] = "Dashboard"  # Login ke baad seedha dashboard
+                st.session_state["nav_to"] = "Dashboard"
                 st.rerun()
         elif st.session_state["page"] == "Signup":
             signup_page.app()
