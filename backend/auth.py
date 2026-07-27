@@ -1,33 +1,22 @@
+import bcrypt
 import re
-import hashlib
-import random
-import smtplib
-from email.mime.text import MIMEText
-from datetime import datetime, timedelta
 
 from backend.database import (
-    create_connection,
     user_exists_by_username,
     user_exists_by_email,
-    get_user_by_email,
-    set_reset_code,
-    verify_reset_code,
-    update_password,
+    insert_user,
+    get_user_for_login,
+    find_user_by_username_and_email,
+    update_password_by_username,
 )
-
-# ================= Gmail SMTP Config =================
-# 1. Gmail account mein 2-Step Verification on karo
-# 2. myaccount.google.com/apppasswords se 16-digit App Password banao
-# 3. Neeche apna Gmail + wo App Password daalo
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_EMAIL = "yourapp@gmail.com"          # <-- apna Gmail yahan
-SMTP_APP_PASSWORD = "xxxx xxxx xxxx xxxx"  # <-- App Password yahan (spaces ke sath ya bina)
-# =======================================================
 
 
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def verify_password(password, hashed_password):
+    return bcrypt.checkpw(password.encode(), hashed_password.encode())
 
 
 def is_valid_email(email):
@@ -55,8 +44,8 @@ def signup(username, email, password):
         return False, "Username cannot be empty."
     if len(username) < 3:
         return False, "Username must be at least 3 characters."
-    if not re.match(r'^[a-zA-Z0-9_]+$', username):
-        return False, "Username can only contain letters, numbers, and underscores."
+    if not re.match(r'^[a-zA-Z0-9_ ]+$', username):
+        return False, "Name can only contain letters, numbers, spaces, and underscores."
     if not email:
         return False, "Email cannot be empty."
     if not is_valid_email(email):
@@ -66,79 +55,56 @@ def signup(username, email, password):
     if not strong:
         return False, msg
 
-    # 🔑 Ye check pehle missing tha — ab signup se PEHLE verify karta hai
     if user_exists_by_username(username):
         return False, "This username is already taken. Try another one."
     if user_exists_by_email(email):
         return False, "This email is already registered. Try logging in."
 
-    conn = create_connection()
-    cur = conn.cursor()
     try:
-        cur.execute(
-            "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-            (username, email, hash_password(password))
-        )
-        conn.commit()
-        return True, f"Account created successfully! Welcome, {username} 🎉"
+        insert_user(username, email, hash_password(password))
     except Exception:
         return False, "Something went wrong. Please try again."
-    finally:
-        conn.close()
+
+    return True, "Account created successfully! You can now login."
 
 
-def login(username_or_email, password):
-    if not username_or_email.strip() or not password.strip():
-        return False
-    conn = create_connection()
-    cur = conn.cursor()
-    hashed = hash_password(password)
-    cur.execute(
-        "SELECT * FROM users WHERE (username=? OR email=?) AND password=?",
-        (username_or_email.strip(), username_or_email.strip().lower(), hashed)
-    )
-    user = cur.fetchone()
-    conn.close()
-    return user is not None
+def login(identifier, password):
+    """Returns (ok: bool, message: str)"""
+    identifier = identifier.strip()
+    if not identifier or not password.strip():
+        return False, "Please enter your username/email and password."
+
+    row = get_user_for_login(identifier)
+    if not row:
+        return False, "Invalid credentials. Check your username/email or password."
+
+    _id, uname, email, stored_hash = row
+    if not verify_password(password, stored_hash):
+        return False, "Invalid credentials. Check your username/email or password."
+
+    return True, "Login successful."
 
 
-# ================= Forgot Password =================
-
-def _send_reset_email(to_email, code):
-    body = f"Your Virtual Lab password reset code is: {code}\nThis code expires in 10 minutes."
-    msg = MIMEText(body)
-    msg["Subject"] = "Virtual Lab - Password Reset Code"
-    msg["From"] = SMTP_EMAIL
-    msg["To"] = to_email
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_EMAIL, SMTP_APP_PASSWORD.replace(" ", ""))
-        server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
-
-
-def request_password_reset(email):
+def find_account(username, email):
+    """Forgot password step 1: username + email dono match hone chahiye"""
+    username = username.strip()
     email = email.strip().lower()
-    if not get_user_by_email(email):
-        return False, "No account found with this email."
-    code = str(random.randint(100000, 999999))
-    expiry = (datetime.now() + timedelta(minutes=10)).isoformat()
-    set_reset_code(email, code, expiry)
-    try:
-        _send_reset_email(email, code)
-    except Exception as e:
-        return False, f"Could not send email: {e}"
-    return True, "Reset code sent to your email."
+
+    if not username or not email:
+        return False, "Please enter both your name and email."
+
+    if not find_user_by_username_and_email(username, email):
+        return False, "No account found with this name and email combination."
+
+    return True, "Identity verified."
 
 
-def reset_password(email, code, new_password):
-    email = email.strip().lower()
-    if not code.strip():
-        return False, "Please enter the code sent to your email."
-    if not verify_reset_code(email, code.strip()):
-        return False, "Invalid or expired code."
+def reset_password(username, new_password):
+    """Forgot password step 2: puzzle UI mein solve ho chuka hota hai, yahan sirf password set hota hai"""
     strong, msg = is_strong_password(new_password)
     if not strong:
         return False, msg
-    update_password(email, hash_password(new_password))
+
+    update_password_by_username(username, hash_password(new_password))
     return True, "Password updated successfully. Please login."
 
