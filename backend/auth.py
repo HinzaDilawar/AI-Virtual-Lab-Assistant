@@ -19,8 +19,18 @@ def verify_password(password, hashed_password):
     return bcrypt.checkpw(password.encode(), hashed_password.encode())
 
 
+def is_valid_username(username):
+    # must be only letters/numbers/spaces/underscores, and contain at least one letter
+    if not re.match(r'^[a-zA-Z0-9_ ]+$', username):
+        return False
+    if not re.search(r'[a-zA-Z]', username):
+        return False
+    return True
+
+
 def is_valid_email(email):
-    pattern = r'^[\w\.-]+@[\w\.-]+\.\w{2,}$'
+    # only gmail.com addresses are accepted
+    pattern = r'^[\w.-]+@gmail\.com$'
     return re.match(pattern, email) is not None
 
 
@@ -44,12 +54,12 @@ def signup(username, email, password):
         return False, "Username cannot be empty."
     if len(username) < 3:
         return False, "Username must be at least 3 characters."
-    if not re.match(r'^[a-zA-Z0-9_ ]+$', username):
-        return False, "Name can only contain letters, numbers, spaces, and underscores."
+    if not is_valid_username(username):
+        return False, "Username must contain letters — it cannot be only numbers, and can include spaces or underscores."
     if not email:
         return False, "Email cannot be empty."
     if not is_valid_email(email):
-        return False, "Please enter a valid email address (e.g. ali@gmail.com)."
+        return False, "Please use a valid Gmail address (e.g. ali@gmail.com)."
 
     strong, msg = is_strong_password(password)
     if not strong:
@@ -73,6 +83,16 @@ def login(identifier, password):
     identifier = identifier.strip()
     if not identifier or not password.strip():
         return False, "Please enter your username/email and password."
+
+    looks_like_email = "@" in identifier
+
+    if looks_like_email:
+        identifier = identifier.lower()
+        if not is_valid_email(identifier):
+            return False, "Please enter a valid Gmail address or your correct username."
+    else:
+        if len(identifier) < 3 or not is_valid_username(identifier):
+            return False, "Please enter a valid username or your correct Gmail address."
 
     row = get_user_for_login(identifier)
     if not row:
@@ -107,4 +127,3 @@ def reset_password(username, new_password):
 
     update_password_by_username(username, hash_password(new_password))
     return True, "Password updated successfully. Please login."
-
