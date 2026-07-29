@@ -56,7 +56,7 @@ def app():
             autocomplete="off", label_visibility="collapsed"
         )
         email = st.text_input(
-            "Email", placeholder="Email", key="su_email",
+            "Email", placeholder="Email (must be @gmail.com)", key="su_email",
             autocomplete="off", label_visibility="collapsed"
         )
         password = st.text_input(
@@ -76,11 +76,10 @@ def app():
             )
         st.markdown("""
         <div style='background:#1e293b; border-radius:8px; padding:10px 14px; font-size:12px; color:#94a3b8; margin-bottom:14px;'>
-        <b>Password must have:</b><br>
-        ✅ At least 8 characters<br>
-        ✅ One uppercase letter (A-Z)<br>
-        ✅ One number (0-9)<br>
-        ✅ One special character (!@#$%...)
+        <b>Requirements:</b><br>
+        ✅ Username must contain at least one letter (not only numbers)<br>
+        ✅ Email must be a valid @gmail.com address<br>
+        ✅ Password: 8+ chars, uppercase, number, special character
         </div>
         """, unsafe_allow_html=True)
 
