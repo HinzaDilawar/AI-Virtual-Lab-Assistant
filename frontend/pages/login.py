@@ -54,7 +54,7 @@ def app():
         """, unsafe_allow_html=True)
 
         username_or_email = st.text_input(
-            "Username or Email", placeholder="Username or Email", key="li_user",
+            "Username or Email", placeholder="Username or Gmail address", key="li_user",
             autocomplete="one-time-code", label_visibility="collapsed"
         )
         password = st.text_input(
