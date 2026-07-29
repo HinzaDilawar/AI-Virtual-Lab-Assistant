@@ -1,7 +1,5 @@
 from groq import Groq
 
-
-
 GROQ_API_KEY = "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"
 
 
